@@ -1,0 +1,6 @@
+{
+  "name": "HealSecure AI - Dual-Modal Sentinel Simulator",
+  "description": "Interactive dual-modal biosensing simulation, LTspice circuit diagrams, MATLAB plotting scripts, and hardware Bill of Materials (BOM) for post-surgical SSI and ADR monitoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
