@@ -29,7 +29,7 @@ fprintf('--> Initializing HealSecure AI Dual-Modal 72h Stream Simulator (%d samp
 %% 2. Generate Synthetic Multi-Modal Physiological Data
 rng(42); % Reproducible random seed
 
-% (A) Wound pH: Baseline 6.4, bacterial colonization at t=28h shifts pH to 7.95
+% (A) Wound pH: Baseline 6.4, simulated local inflammatory reaction at t=28h shifts pH to 7.95
 ph_baseline = 6.4 + 0.1 * sin(2*pi*t/24); % Circadian baseline
 ph_infection = 1.55 ./ (1 + exp(-(t - 36) / 4.5)); % Logistic alkalization
 raw_ph = ph_baseline + ph_infection + 0.08 * randn(1, N);
@@ -128,14 +128,14 @@ fprintf('--> In-silico simulation complete. Simulated early SSI window: 34h-40h.
   {
     id: 'script_ai_fusion_shap',
     filename: 'healsecure_ai_risk_fusion_shap.m',
-    title: '2. Simulation-Based ROC Analysis of Multimodal Risk Fusion & SHAP Explainability',
-    purpose: 'In-silico proof-of-concept modeling for multimodal risk fusion (parallel temporal anomaly detection + gradient boosting), generating synthetic ROC-AUC curves demonstrating potential false-alarm suppression, alongside illustrative SHAP feature attribution waterfall plots.',
+    title: '2. Simulation-Based ROC Analysis of Multimodal Risk Fusion',
+    purpose: 'In-silico proof-of-concept modeling for multimodal risk fusion (parallel temporal anomaly detection + gradient boosting), generating synthetic ROC-AUC curves demonstrating the modeling concept of multimodal risk fusion, alongside illustrative SHAP feature attribution waterfall plots.',
     category: 'AI & SHAP',
     plotType: 'roc_shap',
-    explanation: 'Simulation-based proof of concept; clinical performance requires prospective validation. Generates two clinical figures: Figure 1 plots simulated ROC curves contrasting Dual-Modal Sentinel (illustrative AUC = 0.948) against single-modality baselines (Vitals Only AUC = 0.692, Wound Only AUC = 0.741). Figure 2 produces the explainable SHAP contribution bar chart decomposing individual biomarker weights.',
+    explanation: 'Illustrative in-silico comparison; false-alarm reduction has not been clinically validated. Generates two clinical figures: Figure 1 plots simulated ROC curves contrasting Dual-Modal Sentinel (illustrative in-silico AUC = 0.948) against single-modality baselines (Vitals Only illustrative in-silico AUC = 0.692, Wound Only illustrative in-silico AUC = 0.741). Figure 2 produces the explainable SHAP contribution bar chart decomposing individual biomarker weights.',
     scriptCode: `%% =========================================================================
 % HEALSECURE AI: DUAL-MODAL RISK FUSION, ROC-AUC & SHAP WATERFALL PLOT
-% In-Silico Simulation: Validating Potential False Alarm Reduction & Decision Support
+% In-Silico Simulation: Multimodal Risk Fusion & Decision Support
 % Note: Simulation-based proof of concept; clinical performance requires prospective validation.
 % =========================================================================
 clear; clc; close all;
@@ -192,7 +192,7 @@ auc_wound  = -trapz(FPR_wound, TPR_wound);
 auc_dual   = -trapz(FPR_dual, TPR_dual);
 
 %% 3. Plot Figure 1: ROC-AUC Comparison
-figure('Name', 'HealSecure AI - In-Silico ROC Analysis & False Alarm Reduction', ...
+figure('Name', 'HealSecure AI - Simulation-Based ROC Analysis of Multimodal Risk Fusion', ...
        'Color', [1 1 1], 'Position', [150, 150, 650, 520]);
 
 plot(FPR_dual, TPR_dual, 'Color', [0.000 0.447 0.741], 'LineWidth', 2.6); hold on;
@@ -203,11 +203,11 @@ plot([0 1], [0 1], 'k:', 'LineWidth', 1.2);
 grid on; box on;
 xlabel('False Positive Rate (1 - Specificity)', 'FontSize', 11, 'FontWeight', 'bold');
 ylabel('True Positive Rate (Sensitivity)', 'FontSize', 11, 'FontWeight', 'bold');
-title('\\textbf{In-Silico Multi-Modal ROC Curve: Benchmarking False Alarm Suppression}', ...
+title('\\textbf{Simulation-Based ROC Analysis of Multimodal Risk Fusion}', ...
       'Interpreter', 'latex', 'FontSize', 12);
-legend({sprintf('HealSecure AI Dual-Modal (Illustrative AUC = %.3f)', auc_dual), ...
-        sprintf('Wound Biomarkers Only (Illustrative AUC = %.3f)', auc_wound), ...
-        sprintf('Systemic Vitals Only (Illustrative AUC = %.3f)', auc_vitals), ...
+legend({sprintf('HealSecure AI Dual-Modal (Illustrative in-silico AUC = %.3f)', auc_dual), ...
+        sprintf('Wound Biomarkers Only (Illustrative in-silico AUC = %.3f)', auc_wound), ...
+        sprintf('Systemic Vitals Only (Illustrative in-silico AUC = %.3f)', auc_vitals), ...
         'Random Chance (AUC = 0.500)'}, 'Location', 'southeast', 'FontSize', 10);
 
 %% 4. Plot Figure 2: SHAP Feature Importance Waterfall Plot

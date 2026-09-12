@@ -123,7 +123,7 @@ export const BOMViewer: React.FC = () => {
           </span>
         </div>
         <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-          To prevent architectural ambiguity: HealSecure AI employs the integrated <strong>MAX30102</strong> for the primary wearable prototype. The discrete <strong>OPA2388</strong> topology is retained specifically as an in-silico SPICE reference and bench-testing comparator. Both are <em>not</em> required simultaneously on the physical wearable.
+          The MAX30102 path is the intended integrated PPG architecture. The OPA2388 discrete path is an alternative analog reference design and is not required simultaneously. (Note: The current dashboard is an interactive simulation demonstrating this architecture; the MAX30102 is not physically connected to the browser runtime.)
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -209,7 +209,7 @@ export const BOMViewer: React.FC = () => {
           <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/80">
             <div className="text-orange-400 font-bold mb-1">ADC1_CH3 (GPIO 39 / VN)</div>
             <div className="text-slate-300 font-semibold">Hyperemia ΔT Bridge</div>
-            <div className="text-slate-500 text-[11px] mt-1">INA333 instrumentation amp (Gain=101, 200mV/°C gradient)</div>
+            <div className="text-slate-500 text-[11px] mt-1">INA333 instrumentation amplifier; gain and temperature-gradient sensitivity require calibration</div>
           </div>
 
           <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/80">

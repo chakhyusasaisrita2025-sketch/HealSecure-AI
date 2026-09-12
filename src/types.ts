@@ -103,3 +103,33 @@ export interface BOMComponent {
   datasheetUrl?: string;
   criticalSpec: string;
 }
+
+export interface AuditRecord {
+  recordId: string; // e.g. "HS-2048"
+  eventType: string; // e.g. "Multimodal Data Ingest"
+  category: 'Ingestion' | 'Inference' | 'Explainability' | 'Clinical Action';
+  timestamp: string; // simulated ISO or formatted timestamp
+  payloadSummary: string;
+  payloadJson: Record<string, unknown>;
+  storedHash: string; // SHA-256 hex string
+  calculatedHash?: string;
+  status: 'VERIFIED' | 'MISMATCH' | 'PENDING';
+  actor: string;
+}
+
+export interface ClinicianProfile {
+  id: string;
+  name: string;
+  title: string;
+  department: string;
+  staffId: string;
+  passkey: string;
+  role: 'Physician' | 'Surgeon' | 'Nurse' | 'Bioengineer';
+  avatarInitials: string;
+}
+
+export interface ClinicalSession {
+  clinician: ClinicianProfile;
+  authenticatedAt: string;
+  terminalId: string;
+}

@@ -418,10 +418,10 @@ export const MatlabPlotter: React.FC = () => {
                     {/* ROC Curves */}
                     <div className="border border-slate-300 rounded-xl p-4 bg-slate-50/40">
                       <div className="font-serif text-center font-bold text-xs text-slate-900 mb-1">
-                        Simulation-Based ROC Analysis of Multimodal Risk Fusion (Target: &gt;60% False-Alarm Reduction)
+                        Simulation-Based ROC Analysis of Multimodal Risk Fusion
                       </div>
                       <p className="text-[10px] text-slate-500 text-center mb-2">
-                        Simulation-based comparison showing the potential benefit of multimodal feature fusion over single-modal inputs.
+                        Illustrative in-silico comparison; false-alarm reduction has not been clinically validated.
                       </p>
                       <svg viewBox="0 0 320 240" className="w-full h-56 font-mono text-[10px]">
                         <rect x="35" y="10" width="270" height="200" fill="#fff" stroke="#94a3b8" />
@@ -461,13 +461,13 @@ export const MatlabPlotter: React.FC = () => {
                       {/* Legend */}
                       <div className="mt-2 space-y-1 text-[11px] font-mono">
                         <div className="flex items-center gap-2 text-[#0072bd] font-bold">
-                          <span className="w-3 h-0.5 bg-[#0072bd] inline-block" /> HealSecure Dual-Modal (In-silico AUC = 0.948)
+                          <span className="w-3 h-0.5 bg-[#0072bd] inline-block" /> HealSecure Dual-Modal (Illustrative in-silico AUC = 0.948)
                         </div>
                         <div className="flex items-center gap-2 text-[#d95319]">
-                          <span className="w-3 h-0.5 bg-[#d95319] inline-block" /> Wound Biomarkers Only (In-silico AUC = 0.741)
+                          <span className="w-3 h-0.5 bg-[#d95319] inline-block" /> Wound Biomarkers Only (Illustrative in-silico AUC = 0.741)
                         </div>
                         <div className="flex items-center gap-2 text-[#7e2f8e]">
-                          <span className="w-3 h-0.5 bg-[#7e2f8e] inline-block" /> Systemic Vitals Only (In-silico AUC = 0.692)
+                          <span className="w-3 h-0.5 bg-[#7e2f8e] inline-block" /> Systemic Vitals Only (Illustrative in-silico AUC = 0.692)
                         </div>
                       </div>
                     </div>
@@ -475,10 +475,10 @@ export const MatlabPlotter: React.FC = () => {
                     {/* SHAP Bar Plot */}
                     <div className="border border-slate-300 rounded-xl p-4 bg-slate-50/40 flex flex-col justify-between">
                       <div className="font-serif text-center font-bold text-xs text-slate-900 mb-1">
-                        Simulation Example: SHAP Feature Attribution for Adverse Event Detection
+                        SHAP-Style Feature Attribution — Simulation
                       </div>
                       <p className="text-[10px] text-slate-500 text-center mb-2">
-                        Illustrative feature attribution from the proof-of-concept model.
+                        Decomposing sensor contributions to model predictions (illustrates model feature attribution; does not prove biological causality).
                       </p>
 
                       <div className="space-y-2.5 my-auto text-xs font-mono">

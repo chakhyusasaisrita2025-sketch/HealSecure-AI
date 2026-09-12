@@ -219,7 +219,7 @@ export const CLINICAL_SCENARIOS: ClinicalScenario[] = [
     id: 'early_ssi',
     title: '2. Early SSI Risk Flag (Simulated Pre-Clinical Window)',
     category: 'SSI',
-    description: 'Simulated local inflammatory reaction: alkaline pH shift (7.9) and hyperemic thermal gradient (ΔT +1.8°C) modeled prior to systemic fever.',
+    description: 'Simulated local inflammatory pattern with alkaline pH shift, increased moisture and localized thermal gradient. This scenario demonstrates the concept of earlier warning from local wound physiology; clinical lead-time requires prospective validation.',
     vitals: {
       heartRate: 144,
       spo2: 97,
@@ -234,8 +234,8 @@ export const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       mmpActivity: 84,
     },
     activeDrugs: ['gentamicin', 'cefotaxime'],
-    expectedDiagnosis: 'AI-assisted risk stratification: High probability of localized Surgical Site Infection (SSI) indicative 24-36h prior to systemic fever.',
-    clinicalNote: 'Simulated alkaline pH shift (7.9) + localized ΔT (+1.8°C) exceeds indicative threshold. Recommends prompt clinician bedside wound examination.',
+    expectedDiagnosis: 'Elevated SSI-risk pattern requiring clinician wound assessment. (Simulated early SSI-risk pattern identified before systemic deterioration.)',
+    clinicalNote: 'Simulated alkaline pH shift (7.9) + localized ΔT (+1.8°C) exceeds illustrative threshold. Recommends clinician bedside wound examination.',
   },
   {
     id: 'gentamicin_adr',
@@ -256,8 +256,8 @@ export const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       mmpActivity: 10,
     },
     activeDrugs: ['gentamicin', 'fentanyl', 'cefotaxime'],
-    expectedDiagnosis: 'Suspected Adverse Drug Reaction (ADR): High statistical correlation with Gentamicin + Fentanyl neuromuscular/respiratory suppression via openFDA FAERS disproportionality metrics.',
-    clinicalNote: 'Normal wound biomarkers rule out localized wound shock. FAERS knowledge layer identifies Gentamicin (ROR 3.41) & Fentanyl (ROR 4.82). Urgent bedside clinical assessment advised.',
+    expectedDiagnosis: 'Medication-associated adverse-event signal detected; clinical assessment recommended. Statistical reporting association with Gentamicin + Fentanyl neuromuscular/respiratory suppression via openFDA FAERS disproportionality metrics.',
+    clinicalNote: 'Normal wound biomarkers indicate absence of acute local wound inflammation. FAERS knowledge layer identifies Gentamicin (ROR 3.41) & Fentanyl (ROR 4.82) statistical reporting associations. Urgent bedside clinical assessment advised.',
   },
   {
     id: 'vancomycin_hemodynamic',
@@ -278,7 +278,7 @@ export const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       mmpActivity: 15,
     },
     activeDrugs: ['vancomycin', 'caffeine', 'cefotaxime'],
-    expectedDiagnosis: 'Suspected Infusion Reaction: Histaminergic degranulation profile associated with rapid Vancomycin administration (Red-Man syndrome characteristics).',
+    expectedDiagnosis: 'Medication-associated adverse-event signal detected; clinical assessment recommended. Histaminergic degranulation profile associated with rapid Vancomycin administration (Red-Man syndrome characteristics in FAERS data).',
     clinicalNote: 'FAERS reference layer ranks Vancomycin (ROR 3.10) & Caffeine interaction. Recommends checking infusion rate and physician evaluation for antihistamine protocol.',
   },
   {
@@ -293,14 +293,14 @@ export const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       respiratoryRate: 28,
     },
     biomarkers: {
-      ph: 8.3, // Severe alkalosis (Proteus/Pseudomonas)
+      ph: 8.3, // Severe alkalosis (local inflammatory exudate)
       moisture: 88, // Heavy purulent exudate
       woundTemp: 40.5,
       tempDelta: 1.9, // Severe local hyperemia
       mmpActivity: 120,
     },
     activeDrugs: ['gentamicin', 'fentanyl', 'vancomycin'],
-    expectedDiagnosis: 'CRITICAL MULTI-MODAL ALERT: Combined localized wound biomarker derangement (SSI) and acute pharmacological adverse event risk flags.',
-    clinicalNote: 'Simulated Readmission Risk Score > 90%. System dispatches urgent dual-specialty alert to attending pediatric surgeon and neonatologist.',
+    expectedDiagnosis: 'Critical multimodal risk state: Combined localized wound biomarker derangement and medication-associated adverse-event signal.',
+    clinicalNote: 'Simulated Risk Score > 90%. System dispatches urgent dual-specialty notification for attending pediatric surgeon and neonatologist evaluation.',
   },
 ];

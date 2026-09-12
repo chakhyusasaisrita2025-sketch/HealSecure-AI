@@ -79,7 +79,7 @@ export const CircuitViewer: React.FC = () => {
         <div className="mb-3.5 p-3 rounded-xl bg-blue-50/70 border border-blue-200/70 text-xs text-blue-900 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-[11px] leading-relaxed">
-            <strong className="text-blue-950">Hardware Prototype Architecture Note:</strong> For benchtop embedded prototyping, the <strong>MAX30102 integrated optical sensor</strong> (I2C) serves as the primary plug-and-play PPG module. The discrete <strong>OPA2388 Transimpedance Amplifier</strong> circuit is provided as an alternative high-precision analog reference design for detailed SPICE noise, bandwidth, and ambient light rejection simulations.
+            <strong className="text-blue-950">Hardware Prototype Architecture Note:</strong> The MAX30102 path is the intended integrated PPG architecture. The OPA2388 discrete path is an alternative analog reference design and is not required simultaneously. (Note: The current dashboard is an interactive simulation demonstrating this architecture; the MAX30102 is not physically connected to the browser runtime.)
           </div>
         </div>
 
@@ -216,7 +216,7 @@ export const CircuitViewer: React.FC = () => {
                       <text x="188" y="120" fill="#38bdf8" fontWeight="bold">+</text>
                       <text x="188" y="150" fill="#38bdf8" fontWeight="bold">-</text>
                       <text x="195" y="134" fill="#94a3b8" fontSize="9">U1A</text>
-                      <text x="185" y="80" fill="#e2e8f0" fontSize="10">LTC2050 (Ib&lt;1pA)</text>
+                      <text x="185" y="80" fill="#e2e8f0" fontSize="10">LTC2050 (pA-Range)</text>
 
                       {/* Buffer feedback line */}
                       <path d="M 240 130 L 260 130 L 260 180 L 160 180 L 160 152 L 180 152" fill="none" stroke="#38bdf8" strokeWidth="1.5" />
@@ -368,7 +368,7 @@ export const CircuitViewer: React.FC = () => {
 
                       {/* Output to ADC */}
                       <path d="M 420 130 L 520 130" stroke="#10b981" strokeWidth="2" markerEnd="url(#arrow)" />
-                      <text x="440" y="120" fill="#10b981" fontWeight="bold">V_ΔT (200mV/°C)</text>
+                      <text x="440" y="120" fill="#10b981" fontWeight="bold">V_ΔT (INA333)</text>
                     </g>
                   )}
 
