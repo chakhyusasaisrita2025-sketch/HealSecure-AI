@@ -23,7 +23,9 @@ import {
   Sliders,
   Send,
   Info,
+  Cable,
 } from 'lucide-react';
+import { updateTelemetry } from '../services/telemetryStream';
 
 interface SimulationViewProps {
   isSimulating: boolean;
@@ -116,6 +118,34 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ isSimulating, on
   useEffect(() => {
     onRiskScoreUpdate(fusedRisk);
   }, [fusedRisk, onRiskScoreUpdate]);
+
+  // Synchronize telemetry with Arduino & LCD Hardware Portal
+  useEffect(() => {
+    updateTelemetry({
+      scenarioId: selectedScenario.id,
+      scenarioTitle: selectedScenario.title,
+      heartRate: vitals.heartRate,
+      spo2: vitals.spo2,
+      systemicTemp: vitals.systemicTemp,
+      respiratoryRate: vitals.respiratoryRate,
+      ph: biomarkers.ph,
+      moisture: biomarkers.moisture,
+      woundTemp: biomarkers.woundTemp,
+      deltaT: calculatedDeltaT,
+      ssiRisk: Math.round(ssiScore),
+      adrRisk: Math.round(adrScore),
+      fusedRisk: fusedRisk,
+    });
+  }, [
+    vitals,
+    biomarkers,
+    calculatedDeltaT,
+    ssiScore,
+    adrScore,
+    fusedRisk,
+    selectedScenario.id,
+    selectedScenario.title,
+  ]);
 
   // Compute real-time SHAP feature attribution
   const shapContributions: SHAPContribution[] = [
@@ -339,12 +369,26 @@ try {
               Select an illustrative benchmark case to simulate multi-modal biosensing and FAERS pharmacovigilance association.
             </p>
           </div>
-          <button
-            onClick={() => applyScenario(CLINICAL_SCENARIOS[0])}
-            className="text-xs text-slate-600 hover:text-cyan-700 flex items-center gap-1 font-medium"
-          >
-            <RotateCcw className="w-3 h-3" /> Reset to Baseline
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('healsecure-navigate-tab', { detail: 'arduino' })
+                );
+              }}
+              className="text-xs text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-bold transition shadow-xs cursor-pointer"
+            >
+              <Cable className="w-3.5 h-3.5 text-cyan-600" />
+              <span>Arduino &amp; LCD Portal</span>
+            </button>
+
+            <button
+              onClick={() => applyScenario(CLINICAL_SCENARIOS[0])}
+              className="text-xs text-slate-600 hover:text-cyan-700 flex items-center gap-1 font-medium px-2 py-1"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset to Baseline
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">

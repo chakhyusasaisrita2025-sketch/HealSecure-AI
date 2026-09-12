@@ -7,7 +7,7 @@ export const blockchainClient = createPublicClient({
 });
 
 export async function getOnChainAuditCount(): Promise<number> {
-  const count = await blockchainClient.readContract({
+  const count = await (blockchainClient as any).readContract({
     address: BLOCKCHAIN_CONFIG.contractAddress as `0x${string}`,
     abi: HEAL_SECURE_AUDIT_ABI,
     functionName: "getAuditCount",
@@ -29,7 +29,7 @@ export async function getOnChainAuditRecords(): Promise<OnChainAuditRecord[]> {
   const records: OnChainAuditRecord[] = [];
 
   for (let i = 0; i < count; i++) {
-    const record = await blockchainClient.readContract({
+    const record = await (blockchainClient as any).readContract({
       address: BLOCKCHAIN_CONFIG.contractAddress as `0x${string}`,
       abi: HEAL_SECURE_AUDIT_ABI,
       functionName: "getAuditRecord",

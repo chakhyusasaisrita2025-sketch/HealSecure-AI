@@ -1,5 +1,17 @@
 import React from 'react';
-import { Activity, Cpu, FileText, Layers, Stethoscope, AlertTriangle, ShieldCheck, Lock, UserCheck } from 'lucide-react';
+import {
+  Activity,
+  Cpu,
+  FileText,
+  Layers,
+  Stethoscope,
+  AlertTriangle,
+  ShieldCheck,
+  Lock,
+  UserCheck,
+  Cable,
+  ExternalLink,
+} from 'lucide-react';
 import { ClinicianProfile } from '../types';
 
 interface HeaderProps {
@@ -108,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Telemetry Stream Toggle */}
             <button
               onClick={() => setIsSimulating(!isSimulating)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ${
                 isSimulating
                   ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300'
                   : 'bg-cyan-600 hover:bg-cyan-700 text-white'
@@ -116,6 +128,30 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Activity className="w-3.5 h-3.5" />
               {isSimulating ? 'Pause Stream' : 'Resume Stream'}
+            </button>
+
+            {/* Quick Access to Arduino & USB Hardware Portal */}
+            <button
+              onClick={() => setActiveTab('arduino')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'arduino'
+                  ? 'bg-cyan-700 text-white shadow-cyan-700/20'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+              }`}
+              title="Jump directly to physical Arduino & LCD Hardware Portal"
+            >
+              <Cable className="w-3.5 h-3.5 text-emerald-600" />
+              <span>USB Hardware</span>
+            </button>
+
+            {/* Open in Dedicated Window (Unlocks full Web Serial in Chrome/Edge) */}
+            <button
+              onClick={() => window.open(window.location.href, '_blank')}
+              title="Open HealSecure in a dedicated browser tab to unlock native USB Serial permissions"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-cyan-700 hover:bg-slate-100 border border-slate-300 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden lg:inline text-[11px] font-semibold">New Tab (USB)</span>
             </button>
 
             {/* Authenticated Clinical Staff Badge & Lock Terminal Action */}
@@ -220,6 +256,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ShieldCheck className="w-4 h-4 text-cyan-600" />
             6. Secure Audit &amp; Data Integrity
+          </button>
+
+          <button
+            onClick={() => setActiveTab('arduino')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'arduino'
+                ? 'border-cyan-600 text-cyan-700 bg-cyan-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+            }`}
+          >
+            <Cable className="w-4 h-4 text-emerald-600" />
+            7. Arduino &amp; LCD Portal
           </button>
         </div>
       </div>

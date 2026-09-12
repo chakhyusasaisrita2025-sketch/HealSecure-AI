@@ -35,7 +35,7 @@ export async function recordAuditOnBlockchain(
   eventHash: string,
   previousHash: string
 ): Promise<string> {
-  const transactionHash = await walletClient.writeContract({
+  const transactionHash = await (walletClient as any).writeContract({
     address: BLOCKCHAIN_CONFIG.contractAddress as `0x${string}`,
     abi: HEAL_SECURE_AUDIT_ABI,
     functionName: "recordAudit",
