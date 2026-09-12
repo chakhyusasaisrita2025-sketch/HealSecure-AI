@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { SimulationView } from './components/SimulationView';
 import { CircuitViewer } from './components/CircuitViewer';
@@ -42,6 +42,42 @@ export default function App() {
       // Storage fallback
     }
   };
+
+  // Automatically lock the clinical console after 2 minutes of inactivity.
+  useEffect(() => {
+    if (!clinicalSession) return;
+
+    let inactivityTimer: ReturnType<typeof setTimeout>;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        handleLockTerminal();
+      }, 2 * 60 * 1000);
+    };
+
+    const activityEvents = [
+      'mousemove',
+      'pointermove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+    ];
+
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    resetInactivityTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  }, [clinicalSession]);
 
   // If unauthenticated, gate access with the clinical passkey interface
   if (!clinicalSession) {
