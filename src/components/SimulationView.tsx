@@ -8,6 +8,7 @@ import {
   SHAPContribution,
 } from '../types';
 import { CLINICAL_SCENARIOS, INITIAL_DRUGS, FAERS_DATABASE } from '../data/clinicalData';
+import { createAuditEvent } from '../blockchain/auditService';
 import {
   AlertCircle,
   Pill,
@@ -260,9 +261,34 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ isSimulating, on
   }, [isSimulating, vitals, biomarkers, calculatedDeltaT]);
 
   // Dispatch Clinician Alert
-  const handleDispatchAlert = () => {
+  const handleDispatchAlert = async () => {
     setAlertSent(true);
     const timeStr = new Date().toLocaleTimeString();
+    try {
+  await createAuditEvent("AI_ASSESSMENT", {
+    scenarioId: selectedScenario.id,
+    ssiRisk: Math.round(ssiScore),
+    adrRisk: Math.round(adrScore),
+    fusedRisk,
+    activeSymptoms,
+    faersMatchCount: faersMatches.length,
+    deltaT: calculatedDeltaT,
+    woundPh: biomarkers.ph,
+    moisture: biomarkers.moisture,
+  });
+} catch (error) {
+  console.error("AUDIT ERROR:", error);
+}
+try {
+  await createAuditEvent("ALERT_GENERATED", {
+    scenarioId: selectedScenario.id,
+    fusedRisk,
+    alertType: "CLINICIAN_SMS_AND_BEDSIDE_PAGER",
+    alertTime: timeStr,
+  });
+} catch (error) {
+  console.error("ALERT AUDIT ERROR:", error);
+}
     if (fusedRisk >= 70) {
       setAlertMessage(
         `🚨 [CRITICAL SENTINEL ALERT] Dispatched at ${timeStr} to NICU Attending: Readmission Risk ${fusedRisk}%. Detected: ${

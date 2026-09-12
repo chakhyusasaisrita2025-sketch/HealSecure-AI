@@ -171,6 +171,17 @@ export const Header: React.FC<HeaderProps> = ({
             <Layers className="w-4 h-4 text-purple-600" />
             5. System Architecture &amp; Ideathon Deck
           </button>
+          <button
+  onClick={() => setActiveTab('blockchain')}
+  className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
+    activeTab === 'blockchain'
+      ? 'border-cyan-600 text-cyan-700 bg-cyan-50/50'
+      : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+  }`}
+>
+  <ShieldCheck className="w-4 h-4 text-cyan-600" />
+  6. Blockchain Auditor
+</button>
         </div>
       </div>
     </header>
