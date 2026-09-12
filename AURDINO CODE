@@ -1,0 +1,1476 @@
+#include <Wire.h>
+#include <Servo.h>
+
+/*
+========================================================
+              HEALSECURE AI
+             ARDUINO UNO MASTER
+========================================================
+
+GSR                -> A0
+GAS SENSOR A0      -> A1
+
+74HC08:
+D2 -> Pin 1
+D3 -> Pin 2
+D4 <- Pin 3
+
+RED LED            -> D7
+SERVO SIGNAL       -> D6
+
+I2C:
+SDA -> A4
+SCL -> A5
+
+LCD ADDRESS        -> 0x27
+RGB ADDRESS        -> 0x29
+
+SERIAL COMMANDS:
+
+0 = LOW
+1 = GENTAMICIN
+2 = VANCOMYCIN
+3 = CEFOTAXIME
+4 = FENTANYL
+5 = CAFFEINE
+6 = FUROSEMIDE
+7 = GENT + VANCO
+8 = GENT + FURO
+9 = VANCO + FURO
+T = TRIPLE ANTIBIOTIC
+F = FENTANYL + CAFFEINE
+A = AUTO
+V = LIVE
+? = MENU
+
+========================================================
+IMPORTANT
+========================================================
+
+The drug-mode SpO2, HR, temperature, pH and RR values
+are demonstration values only.
+
+Your current physical sensors do NOT measure those
+clinical parameters.
+
+LIVE mode uses your real GSR + GAS + RGB sensors.
+
+========================================================
+*/
+
+
+// ======================================================
+// PINS
+// ======================================================
+
+#define GSR_PIN A0
+#define GAS_PIN A1
+
+#define AND_A 2
+#define AND_B 3
+#define AND_OUT 4
+
+#define SERVO_PIN 6
+#define LED_PIN 7
+
+
+// ======================================================
+// I2C
+// ======================================================
+
+#define LCD_ADDR 0x27
+#define RGB_ADDR 0x29
+
+
+// ======================================================
+// OBJECT
+// ======================================================
+
+Servo riskServo;
+
+
+// ======================================================
+// DEVICE FLAGS
+// IMPORTANT: DECLARED BEFORE setup()
+// ======================================================
+
+bool lcdPresentFlag = false;
+bool rgbPresentFlag = false;
+
+
+// ======================================================
+// SENSOR VALUES
+// ======================================================
+
+int gsrValue = 0;
+int gasValue = 0;
+
+int gsrBaseline = 0;
+int gasBaseline = 0;
+
+uint16_t redValue = 0;
+uint16_t greenValue = 0;
+uint16_t blueValue = 0;
+uint16_t clearValue = 0;
+
+
+// ======================================================
+// SENSOR FLAGS
+// ======================================================
+
+bool gsrAbnormal = false;
+bool gasAbnormal = false;
+bool rgbAbnormal = false;
+bool andHigh = false;
+
+
+// ======================================================
+// MODE
+//
+// 0  LOW
+// 1  GENTAMICIN
+// 2  VANCOMYCIN
+// 3  CEFOTAXIME
+// 4  FENTANYL
+// 5  CAFFEINE
+// 6  FUROSEMIDE
+// 7  GENT + VANCO
+// 8  GENT + FURO
+// 9  VANCO + FURO
+// 10 TRIPLE
+// 11 FENT + CAFFEINE
+// 12 AUTO
+// 13 LIVE
+// ======================================================
+
+byte currentMode = 0;
+
+
+// ======================================================
+// DEMO VITALS
+// ======================================================
+
+int demoSpO2 = 97;
+int demoHR = 145;
+int demoRR = 44;
+int demoTemp10 = 367;
+int demoPH100 = 731;
+
+
+// ======================================================
+// LCD
+// ======================================================
+
+byte lcdPage = 0;
+
+
+// ======================================================
+// TIMERS
+// ======================================================
+
+unsigned long lcdTimer = 0;
+unsigned long serialTimer = 0;
+unsigned long servoTimer = 0;
+unsigned long ledTimer = 0;
+
+
+// ======================================================
+// SERVO
+// ======================================================
+
+int servoPosition = 0;
+int servoDirection = 1;
+
+
+// ======================================================
+// LED
+// ======================================================
+
+bool ledState = false;
+
+
+// ======================================================
+// LCD LOW LEVEL
+// ======================================================
+
+void lcdWrite(byte data)
+{
+  Wire.beginTransmission(LCD_ADDR);
+  Wire.write(data);
+  Wire.endTransmission();
+}
+
+
+// ======================================================
+// LCD COMMAND
+// ======================================================
+
+void lcdCommand(byte command)
+{
+  byte highNibble = command & 0xF0;
+  byte lowNibble = (command << 4) & 0xF0;
+
+  lcdWrite(highNibble | 0x0C);
+  lcdWrite(highNibble | 0x08);
+
+  lcdWrite(lowNibble | 0x0C);
+  lcdWrite(lowNibble | 0x08);
+}
+
+
+// ======================================================
+// LCD CHARACTER
+// ======================================================
+
+void lcdChar(char c)
+{
+  byte highNibble = c & 0xF0;
+  byte lowNibble = (c << 4) & 0xF0;
+
+  lcdWrite(highNibble | 0x0D);
+  lcdWrite(highNibble | 0x09);
+
+  lcdWrite(lowNibble | 0x0D);
+  lcdWrite(lowNibble | 0x09);
+}
+
+
+// ======================================================
+// LCD TEXT
+// ======================================================
+
+void lcdText(const char *text)
+{
+  while (*text)
+  {
+    lcdChar(*text);
+    text++;
+  }
+}
+
+
+// ======================================================
+// LCD NUMBER
+// ======================================================
+
+void lcdNumber(int value)
+{
+  char buffer[10];
+
+  itoa(value, buffer, 10);
+
+  lcdText(buffer);
+}
+
+
+// ======================================================
+// LCD TEMPERATURE
+// ======================================================
+
+void lcdTemperature(int value)
+{
+  lcdNumber(value / 10);
+  lcdChar('.');
+  lcdNumber(abs(value % 10));
+  lcdChar('C');
+}
+
+
+// ======================================================
+// LCD PH
+// ======================================================
+
+void lcdPH(int value)
+{
+  lcdNumber(value / 100);
+  lcdChar('.');
+  lcdNumber((value % 100) / 10);
+  lcdNumber(value % 10);
+}
+
+
+// ======================================================
+// LCD CLEAR
+// ======================================================
+
+void lcdClear()
+{
+  lcdCommand(0x01);
+  delay(2);
+}
+
+
+// ======================================================
+// LCD CURSOR
+// ======================================================
+
+void lcdCursor(byte column, byte row)
+{
+  byte address;
+
+  if (row == 0)
+    address = column;
+  else
+    address = 0x40 + column;
+
+  lcdCommand(0x80 | address);
+}
+
+
+// ======================================================
+// LCD INIT
+// ======================================================
+
+void lcdInit()
+{
+  delay(50);
+
+  lcdCommand(0x33);
+  lcdCommand(0x32);
+  lcdCommand(0x28);
+  lcdCommand(0x0C);
+  lcdCommand(0x06);
+  lcdCommand(0x01);
+
+  delay(10);
+}
+
+
+// ======================================================
+// I2C CHECK
+// ======================================================
+
+bool deviceFound(byte address)
+{
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;
+}
+
+
+// ======================================================
+// RGB WRITE
+// ======================================================
+
+void rgbWrite(byte reg, byte value)
+{
+  Wire.beginTransmission(RGB_ADDR);
+
+  Wire.write(0x80 | reg);
+  Wire.write(value);
+
+  Wire.endTransmission();
+}
+
+
+// ======================================================
+// RGB READ
+// ======================================================
+
+uint16_t rgbRead(byte reg)
+{
+  Wire.beginTransmission(RGB_ADDR);
+
+  Wire.write(0xA0 | reg);
+
+  Wire.endTransmission();
+
+  Wire.requestFrom(RGB_ADDR, (byte)2);
+
+  if (Wire.available() < 2)
+    return 0;
+
+  byte lowByte = Wire.read();
+  byte highByte = Wire.read();
+
+  return ((uint16_t)highByte << 8) | lowByte;
+}
+
+
+// ======================================================
+// RGB INIT
+// ======================================================
+
+void rgbInit()
+{
+  rgbWrite(0x00, 0x01);
+
+  delay(5);
+
+  rgbWrite(0x00, 0x03);
+
+  rgbWrite(0x01, 0xEB);
+
+  rgbWrite(0x0F, 0x01);
+
+  delay(60);
+}
+
+
+// ======================================================
+// READ RGB
+// ======================================================
+
+void readRGB()
+{
+  clearValue = rgbRead(0x14);
+  redValue = rgbRead(0x16);
+  greenValue = rgbRead(0x18);
+  blueValue = rgbRead(0x1A);
+}
+
+
+// ======================================================
+// RGB RED DETECTION
+// ======================================================
+
+bool redDetected()
+{
+  if (clearValue < 30)
+    return false;
+
+  if (redValue < 80)
+    return false;
+
+  if (redValue > (greenValue * 1.30) &&
+      redValue > (blueValue * 1.30))
+  {
+    return true;
+  }
+
+  return false;
+}
+
+
+// ======================================================
+// GSR ANOMALY
+// ======================================================
+
+bool gsrDetected()
+{
+  if (gsrBaseline < 5)
+    return false;
+
+  long difference =
+    abs(gsrValue - gsrBaseline);
+
+  return difference >=
+         (gsrBaseline * 20L / 100L);
+}
+
+
+// ======================================================
+// GAS ANOMALY
+// ======================================================
+
+bool gasDetected()
+{
+  if (gasBaseline < 5)
+    return false;
+
+  long difference =
+    abs(gasValue - gasBaseline);
+
+  return difference >=
+         (gasBaseline * 20L / 100L);
+}
+
+
+// ======================================================
+// COLOR
+// ======================================================
+
+byte getColor()
+{
+  if (clearValue < 10)
+    return 0;
+
+  if (redValue > greenValue * 1.30 &&
+      redValue > blueValue * 1.30)
+    return 1;
+
+  if (greenValue > redValue * 1.20 &&
+      greenValue > blueValue * 1.20)
+    return 2;
+
+  if (blueValue > redValue * 1.20 &&
+      blueValue > greenValue * 1.20)
+    return 3;
+
+  return 4;
+}
+
+
+// ======================================================
+// CALIBRATION
+// ======================================================
+
+void calibrate()
+{
+  Serial.println(F("CALIBRATING..."));
+  Serial.println(F("Keep sensors normal."));
+
+  if (lcdPresentFlag)
+  {
+    lcdClear();
+
+    lcdCursor(0, 0);
+    lcdText("CALIBRATING");
+
+    lcdCursor(0, 1);
+    lcdText("KEEP NORMAL");
+  }
+
+  delay(2000);
+
+  long gsrTotal = 0;
+  long gasTotal = 0;
+
+  for (byte i = 0; i < 20; i++)
+  {
+    gsrTotal += analogRead(GSR_PIN);
+    gasTotal += analogRead(GAS_PIN);
+
+    delay(50);
+  }
+
+  gsrBaseline = gsrTotal / 20;
+  gasBaseline = gasTotal / 20;
+
+  Serial.print(F("GSR BASELINE: "));
+  Serial.println(gsrBaseline);
+
+  Serial.print(F("GAS BASELINE: "));
+  Serial.println(gasBaseline);
+}
+
+
+// ======================================================
+// DRUG DEMO VITALS
+// ======================================================
+
+void setDemoValues(byte mode)
+{
+  switch (mode)
+  {
+    case 0:
+      demoSpO2 = 97;
+      demoHR = 145;
+      demoRR = 44;
+      demoTemp10 = 367;
+      demoPH100 = 731;
+      break;
+
+    case 1:
+      demoSpO2 = 96;
+      demoHR = 148;
+      demoRR = 45;
+      demoTemp10 = 367;
+      demoPH100 = 730;
+      break;
+
+    case 2:
+      demoSpO2 = 96;
+      demoHR = 150;
+      demoRR = 45;
+      demoTemp10 = 368;
+      demoPH100 = 730;
+      break;
+
+    case 3:
+      demoSpO2 = 97;
+      demoHR = 147;
+      demoRR = 44;
+      demoTemp10 = 367;
+      demoPH100 = 731;
+      break;
+
+    case 4:
+      demoSpO2 = 93;
+      demoHR = 118;
+      demoRR = 22;
+      demoTemp10 = 366;
+      demoPH100 = 728;
+      break;
+
+    case 5:
+      demoSpO2 = 97;
+      demoHR = 171;
+      demoRR = 56;
+      demoTemp10 = 368;
+      demoPH100 = 731;
+      break;
+
+    case 6:
+      demoSpO2 = 95;
+      demoHR = 156;
+      demoRR = 48;
+      demoTemp10 = 367;
+      demoPH100 = 729;
+      break;
+
+    case 7:
+      demoSpO2 = 94;
+      demoHR = 158;
+      demoRR = 49;
+      demoTemp10 = 366;
+      demoPH100 = 727;
+      break;
+
+    case 8:
+      demoSpO2 = 94;
+      demoHR = 160;
+      demoRR = 51;
+      demoTemp10 = 366;
+      demoPH100 = 727;
+      break;
+
+    case 9:
+      demoSpO2 = 94;
+      demoHR = 159;
+      demoRR = 50;
+      demoTemp10 = 366;
+      demoPH100 = 728;
+      break;
+
+    case 10:
+      demoSpO2 = 92;
+      demoHR = 162;
+      demoRR = 53;
+      demoTemp10 = 365;
+      demoPH100 = 726;
+      break;
+
+    case 11:
+      demoSpO2 = 92;
+      demoHR = 155;
+      demoRR = 25;
+      demoTemp10 = 366;
+      demoPH100 = 727;
+      break;
+  }
+}
+
+
+// ======================================================
+// LIVE SENSOR PROCESSING
+// ======================================================
+
+void processLive()
+{
+  gsrValue = analogRead(GSR_PIN);
+
+  gasValue = analogRead(GAS_PIN);
+
+  if (rgbPresentFlag)
+    readRGB();
+
+  gsrAbnormal = gsrDetected();
+
+  gasAbnormal = gasDetected();
+
+  rgbAbnormal = redDetected();
+
+
+  // Send real anomalies to 74HC08
+
+  digitalWrite(
+    AND_A,
+    gsrAbnormal ? HIGH : LOW
+  );
+
+  digitalWrite(
+    AND_B,
+    gasAbnormal ? HIGH : LOW
+  );
+
+  delayMicroseconds(100);
+
+  andHigh =
+    digitalRead(AND_OUT);
+
+
+  Serial.println();
+
+  Serial.print(F("GSR: "));
+  Serial.println(gsrValue);
+
+  Serial.print(F("GAS: "));
+  Serial.println(gasValue);
+
+  Serial.print(F("RGB R: "));
+  Serial.println(redValue);
+
+  Serial.print(F("RGB G: "));
+  Serial.println(greenValue);
+
+  Serial.print(F("RGB B: "));
+  Serial.println(blueValue);
+
+  Serial.print(F("RGB RED: "));
+  Serial.println(
+    rgbAbnormal ? F("YES") : F("NO")
+  );
+
+  Serial.print(F("74HC08: "));
+  Serial.println(
+    andHigh ? F("HIGH") : F("LOW")
+  );
+}
+
+
+// ======================================================
+// LIVE RISK
+//
+// 0 = LOW
+// 1 = MEDIUM
+// 2 = HIGH
+// ======================================================
+
+byte getLiveRisk()
+{
+  byte abnormalCount = 0;
+
+  if (gsrAbnormal)
+    abnormalCount++;
+
+  if (gasAbnormal)
+    abnormalCount++;
+
+  if (rgbAbnormal)
+    abnormalCount++;
+
+
+  if (andHigh || abnormalCount >= 2)
+    return 2;
+
+  if (abnormalCount == 1)
+    return 1;
+
+  return 0;
+}
+
+
+// ======================================================
+// SERVO LOW
+// ======================================================
+
+void servoLow()
+{
+  servoPosition = 0;
+  servoDirection = 1;
+
+  riskServo.write(0);
+}
+
+
+// ======================================================
+// SERVO MEDIUM
+// ======================================================
+
+void servoMedium()
+{
+  if (millis() - servoTimer >= 20)
+  {
+    servoTimer = millis();
+
+    servoPosition +=
+      servoDirection * 5;
+
+
+    if (servoPosition >= 90)
+    {
+      servoPosition = 90;
+      servoDirection = -1;
+    }
+
+
+    if (servoPosition <= 20)
+    {
+      servoPosition = 20;
+      servoDirection = 1;
+    }
+
+
+    riskServo.write(servoPosition);
+  }
+}
+
+
+// ======================================================
+// SERVO HIGH
+// ======================================================
+
+void servoHigh()
+{
+  if (millis() - servoTimer >= 8)
+  {
+    servoTimer = millis();
+
+    servoPosition +=
+      servoDirection * 8;
+
+
+    if (servoPosition >= 120)
+    {
+      servoPosition = 120;
+      servoDirection = -1;
+    }
+
+
+    if (servoPosition <= 20)
+    {
+      servoPosition = 20;
+      servoDirection = 1;
+    }
+
+
+    riskServo.write(servoPosition);
+  }
+}
+
+
+// ======================================================
+// LED
+// ======================================================
+
+void ledLow()
+{
+  digitalWrite(
+    LED_PIN,
+    LOW
+  );
+}
+
+
+void ledMedium()
+{
+  if (millis() - ledTimer >= 250)
+  {
+    ledTimer = millis();
+
+    ledState = !ledState;
+
+    digitalWrite(
+      LED_PIN,
+      ledState
+    );
+  }
+}
+
+
+void ledHigh()
+{
+  digitalWrite(
+    LED_PIN,
+    HIGH
+  );
+}
+
+
+// ======================================================
+// ACTUATOR
+// ======================================================
+
+void setActuators(byte risk)
+{
+  if (risk == 2)
+  {
+    ledHigh();
+    servoHigh();
+  }
+
+  else if (risk == 1)
+  {
+    ledMedium();
+    servoMedium();
+  }
+
+  else
+  {
+    ledLow();
+    servoLow();
+  }
+}
+
+
+// ======================================================
+// DRUG NAME
+// ======================================================
+
+void printDrugLCD()
+{
+  switch (currentMode)
+  {
+    case 0: lcdText("NONE"); break;
+    case 1: lcdText("GENTAMICIN"); break;
+    case 2: lcdText("VANCOMYCIN"); break;
+    case 3: lcdText("CEFOTAXIME"); break;
+    case 4: lcdText("FENTANYL"); break;
+    case 5: lcdText("CAFFEINE"); break;
+    case 6: lcdText("FUROSEMIDE"); break;
+    case 7: lcdText("GENT+VANCO"); break;
+    case 8: lcdText("GENT+FURO"); break;
+    case 9: lcdText("VANCO+FURO"); break;
+    case 10: lcdText("G+V+CEF"); break;
+    case 11: lcdText("FENT+CAFF"); break;
+
+    case 12:
+    case 13:
+      lcdText("LIVE");
+      break;
+  }
+}
+
+
+// ======================================================
+// LCD RISK PAGE
+// ======================================================
+
+void lcdRiskPage(byte risk)
+{
+  lcdClear();
+
+  lcdCursor(0, 0);
+
+  lcdText("RISK:");
+
+  if (risk == 0)
+    lcdText("LOW");
+
+  else if (risk == 1)
+    lcdText("MEDIUM");
+
+  else
+    lcdText("HIGH");
+
+
+  lcdCursor(0, 1);
+
+  printDrugLCD();
+}
+
+
+// ======================================================
+// LCD SENSOR PAGE
+// ======================================================
+
+void lcdSensorPage()
+{
+  lcdClear();
+
+  lcdCursor(0, 0);
+
+  if (currentMode >= 12)
+  {
+    lcdText("GSR:");
+    lcdNumber(gsrValue);
+
+    lcdText(" G:");
+    lcdNumber(gasValue);
+  }
+  else
+  {
+    lcdText("SpO2:");
+    lcdNumber(demoSpO2);
+    lcdChar('%');
+  }
+
+
+  lcdCursor(0, 1);
+
+  if (currentMode >= 12)
+  {
+    lcdText("RED:");
+
+    if (rgbAbnormal)
+      lcdText("YES");
+    else
+      lcdText("NO");
+  }
+  else
+  {
+    lcdText("HR:");
+    lcdNumber(demoHR);
+
+    lcdText(" RR:");
+    lcdNumber(demoRR);
+  }
+}
+
+
+// ======================================================
+// LCD INFO PAGE
+// ======================================================
+
+void lcdInfoPage()
+{
+  lcdClear();
+
+  lcdCursor(0, 0);
+
+  if (currentMode >= 12)
+  {
+    lcdText("R:");
+    lcdNumber(redValue);
+
+    lcdText(" G:");
+    lcdNumber(greenValue);
+  }
+  else
+  {
+    lcdText("TEMP:");
+    lcdTemperature(demoTemp10);
+  }
+
+
+  lcdCursor(0, 1);
+
+  if (currentMode >= 12)
+  {
+    lcdText("B:");
+    lcdNumber(blueValue);
+  }
+  else
+  {
+    lcdText("pH:");
+    lcdPH(demoPH100);
+  }
+}
+
+
+// ======================================================
+// LCD ALERT PAGE
+// ======================================================
+
+void lcdAlertPage(byte risk)
+{
+  lcdClear();
+
+  lcdCursor(0, 0);
+
+  if (currentMode >= 12)
+  {
+    if (rgbAbnormal)
+      lcdText("RGB RED ALERT");
+
+    else if (gsrAbnormal)
+      lcdText("GSR ALERT");
+
+    else if (gasAbnormal)
+      lcdText("GAS ALERT");
+
+    else
+      lcdText("NORMAL");
+  }
+  else
+  {
+    if (currentMode == 4)
+      lcdText("RESP WATCH");
+
+    else if (currentMode >= 7)
+      lcdText("DRUG INTERACTION");
+
+    else
+      lcdText("MONITOR");
+  }
+
+
+  lcdCursor(0, 1);
+
+  if (risk == 2)
+    lcdText("!!! HIGH !!!");
+
+  else if (risk == 1)
+    lcdText("CHECK");
+
+  else
+    lcdText("NORMAL");
+}
+
+
+// ======================================================
+// SERIAL MENU
+// ======================================================
+
+void showMenu()
+{
+  Serial.println();
+  Serial.println(F("=============================="));
+  Serial.println(F("      HEALSECURE AI"));
+  Serial.println(F("=============================="));
+
+  Serial.println(F("0 LOW"));
+  Serial.println(F("1 GENTAMICIN"));
+  Serial.println(F("2 VANCOMYCIN"));
+  Serial.println(F("3 CEFOTAXIME"));
+  Serial.println(F("4 FENTANYL"));
+  Serial.println(F("5 CAFFEINE"));
+  Serial.println(F("6 FUROSEMIDE"));
+  Serial.println(F("7 GENT + VANCO"));
+  Serial.println(F("8 GENT + FURO"));
+  Serial.println(F("9 VANCO + FURO"));
+  Serial.println(F("T TRIPLE"));
+  Serial.println(F("F FENT + CAFF"));
+  Serial.println(F("A AUTO"));
+  Serial.println(F("V LIVE"));
+  Serial.println(F("? MENU"));
+
+  Serial.println(F("=============================="));
+}
+
+
+// ======================================================
+// COMMAND HANDLER
+// ======================================================
+
+void handleCommand()
+{
+  if (!Serial.available())
+    return;
+
+  char command =
+    Serial.read();
+
+
+  if (command == '\n' ||
+      command == '\r' ||
+      command == ' ')
+  {
+    return;
+  }
+
+
+  if (command >= '0' &&
+      command <= '9')
+  {
+    currentMode =
+      command - '0';
+
+    setDemoValues(currentMode);
+
+    Serial.println();
+    Serial.println(F("DRUG DEMO SELECTED"));
+  }
+
+
+  else if (command == 'T' ||
+           command == 't')
+  {
+    currentMode = 10;
+
+    setDemoValues(10);
+
+    Serial.println(F("TRIPLE ANTIBIOTIC"));
+  }
+
+
+  else if (command == 'F' ||
+           command == 'f')
+  {
+    currentMode = 11;
+
+    setDemoValues(11);
+
+    Serial.println(F("FENTANYL + CAFFEINE"));
+  }
+
+
+  else if (command == 'A' ||
+           command == 'a')
+  {
+    currentMode = 12;
+
+    Serial.println(F("AUTO MODE"));
+  }
+
+
+  else if (command == 'V' ||
+           command == 'v')
+  {
+    currentMode = 13;
+
+    Serial.println();
+    Serial.println(F("************************"));
+    Serial.println(F("      LIVE MODE"));
+    Serial.println(F("************************"));
+  }
+
+
+  else if (command == '?')
+  {
+    showMenu();
+  }
+}
+
+
+// ======================================================
+// SETUP
+// ======================================================
+
+void setup()
+{
+  Serial.begin(9600);
+
+  Wire.begin();
+
+
+  // 74HC08
+
+  pinMode(
+    AND_A,
+    OUTPUT
+  );
+
+  pinMode(
+    AND_B,
+    OUTPUT
+  );
+
+  pinMode(
+    AND_OUT,
+    INPUT
+  );
+
+
+  digitalWrite(
+    AND_A,
+    LOW
+  );
+
+  digitalWrite(
+    AND_B,
+    LOW
+  );
+
+
+  // LED
+
+  pinMode(
+    LED_PIN,
+    OUTPUT
+  );
+
+  digitalWrite(
+    LED_PIN,
+    LOW
+  );
+
+
+  // SERVO
+
+  riskServo.attach(
+    SERVO_PIN
+  );
+
+  riskServo.write(0);
+
+
+  // LCD
+
+  lcdPresentFlag =
+    deviceFound(LCD_ADDR);
+
+
+  if (lcdPresentFlag)
+  {
+    lcdInit();
+
+    lcdClear();
+
+    lcdCursor(0, 0);
+    lcdText("HEALSECURE AI");
+
+    lcdCursor(0, 1);
+    lcdText("NICU DEMO");
+
+    delay(1500);
+  }
+
+
+  // RGB
+
+  rgbPresentFlag =
+    deviceFound(RGB_ADDR);
+
+
+  if (rgbPresentFlag)
+  {
+    rgbInit();
+
+    Serial.println(
+      F("RGB SENSOR FOUND")
+    );
+  }
+  else
+  {
+    Serial.println(
+      F("RGB SENSOR NOT FOUND")
+    );
+  }
+
+
+  // Calibration
+
+  calibrate();
+
+
+  // Start LOW
+
+  currentMode = 0;
+
+  setDemoValues(0);
+
+
+  Serial.println();
+  Serial.println(
+    F("HEALSECURE AI READY")
+  );
+
+
+  showMenu();
+}
+
+
+// ======================================================
+// LOOP
+// ======================================================
+
+void loop()
+{
+  handleCommand();
+
+
+  // -----------------------------------------------
+  // LIVE / AUTO
+  // -----------------------------------------------
+
+  if (currentMode == 12 ||
+      currentMode == 13)
+  {
+    processLive();
+  }
+
+
+  // -----------------------------------------------
+  // GET RISK
+  // -----------------------------------------------
+
+  byte risk = 0;
+
+
+  if (currentMode == 12 ||
+      currentMode == 13)
+  {
+    risk =
+      getLiveRisk();
+  }
+  else
+  {
+    if (currentMode == 0)
+      risk = 0;
+
+    else if (
+      currentMode == 4 ||
+      currentMode >= 7
+    )
+      risk = 2;
+
+    else
+      risk = 1;
+  }
+
+
+  // -----------------------------------------------
+  // ACTUATORS
+  // -----------------------------------------------
+
+  setActuators(risk);
+
+
+  // -----------------------------------------------
+  // SERIAL LIVE
+  // -----------------------------------------------
+
+  if (
+    currentMode == 12 ||
+    currentMode == 13
+  )
+  {
+    if (millis() - serialTimer >= 500)
+    {
+      serialTimer = millis();
+
+      Serial.print(F("GSR="));
+      Serial.print(gsrValue);
+
+      Serial.print(F(" GAS="));
+      Serial.print(gasValue);
+
+      Serial.print(F(" R="));
+      Serial.print(redValue);
+
+      Serial.print(F(" G="));
+      Serial.print(greenValue);
+
+      Serial.print(F(" B="));
+      Serial.print(blueValue);
+
+      Serial.print(F(" RISK="));
+
+      if (risk == 0)
+        Serial.println(F("LOW"));
+
+      else if (risk == 1)
+        Serial.println(F("MEDIUM"));
+
+      else
+        Serial.println(F("HIGH"));
+    }
+  }
+
+
+  // -----------------------------------------------
+  // LCD
+  // -----------------------------------------------
+
+  unsigned long interval;
+
+  if (currentMode == 13)
+    interval = 500;
+  else
+    interval = 1500;
+
+
+  if (
+    millis() - lcdTimer >= interval
+  )
+  {
+    lcdTimer = millis();
+
+
+    if (lcdPresentFlag)
+    {
+      if (lcdPage == 0)
+        lcdRiskPage(risk);
+
+      else if (lcdPage == 1)
+        lcdSensorPage();
+
+      else if (lcdPage == 2)
+        lcdInfoPage();
+
+      else
+        lcdAlertPage(risk);
+
+
+      lcdPage++;
+
+
+      if (lcdPage > 3)
+        lcdPage = 0;
+    }
+  }
+
+
+  delay(5);
+}
